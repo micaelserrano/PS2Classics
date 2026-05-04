@@ -206,10 +206,14 @@ void ps2_encrypt_image(char mode[], char image_name[], char data_file[], char re
 	u32 read = 0;
 	u32 num_child_segments = 0x200;
 	u32 segment_number = 0;
+	s64 bytes_processed = 0;
+	int last_pct = -1;
 
 	//open files
 	in = fopen(image_name, "rb");
+	if(!in) { fprintf(stderr, "Error: cannot open input file %s\n", image_name); exit(1); }
 	data_out = fopen(data_file, "wb");
+	if(!data_out) { fclose(in); fprintf(stderr, "Error: cannot open output file %s\n", data_file); exit(1); }
 
 	//get file info
 	segment_size = PS2_DEFAULT_SEGMENT_SIZE;
@@ -273,6 +277,14 @@ void ps2_encrypt_image(char mode[], char image_name[], char data_file[], char re
 		//write meta and data
 		fwrite(meta_buffer, segment_size, 1, data_out);
 		fwrite(data_buffer, segment_size*num_child_segments, 1, data_out);
+
+		bytes_processed += read;
+		int pct = (data_size > 0) ? (int)((bytes_processed * 100) / data_size) : 100;
+		if(pct > last_pct) {
+			fprintf(stderr, "ps2classic [%d%%]\n", pct);
+			fflush(stderr);
+			last_pct = pct;
+		}
 
 		memset(data_buffer, 0, segment_size*num_child_segments);
 	}
